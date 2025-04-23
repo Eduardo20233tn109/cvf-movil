@@ -1,0 +1,45 @@
+# dependencias
+node_modules/
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+expo-env.d.ts
+
+# Archivos nativos y de compilación
+android/
+ios/
+*.apk
+*.aab
+*.keystore
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.xcworkspace
+*.xcodeproj
+
+# Metro Bundler
+.metro-cache/
+.metro-health-check*
+
+# Debug y logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+*.pem
+
+# Variables de entorno
+.env
+.env*.local
+
+# TypeScript
+*.tsbuildinfo
