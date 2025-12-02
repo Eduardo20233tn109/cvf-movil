@@ -36,15 +36,7 @@ export default function Navigation() {
           name="Login"
           component={LoginScreen}
           options={{
-            headerShown: true,
-            title: 'INICIO DE SESIÓN',
-            headerStyle: { backgroundColor: '#7C4A2D' },
-            headerTitleStyle: {
-              fontWeight: 'bold',
-              color: 'white',
-              fontSize: 18,
-            },
-            headerTitleAlign: 'center',
+            headerShown: false,
           }}
         />
       )}

@@ -8,10 +8,12 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  SafeAreaView,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { UserContext } from '../../context/userContext';
+import { colors } from '../../constants/colors';
 
 export default function EditProfileScreen() {
   const navigation = useNavigation();
@@ -49,7 +51,7 @@ export default function EditProfileScreen() {
 
   const checkUsernameUnique = async () => {
     try {
-      const res = await fetch(`http://192.168.0.166:4000/api/users/check-username?username=${formData.username}`);
+      const res = await fetch(`http://192.168.0.138:4000/api/users/check-username?username=${formData.username}`);
       const data = await res.json();
       return data.available || data._id === user._id;
     } catch (err) {
@@ -60,7 +62,7 @@ export default function EditProfileScreen() {
 
   const handleGuardar = async () => {
     try {
-      const response = await fetch(`http://192.168.0.166:4000/api/users/update-profile`, {
+      const response = await fetch(`http://192.168.0.138:4000/api/users/update-profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -89,136 +91,241 @@ export default function EditProfileScreen() {
   
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>EDITAR PERFIL</Text>
+    <View style={styles.container}>
+      <SafeAreaView style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.primaryLight} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Editar Perfil</Text>
+        <View style={{ width: 40 }} />
+      </SafeAreaView>
 
-      <Image
-        source={require('../../images/Residente/residente.png')}
-        style={styles.profileImage}
-      />
-    
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Avatar */}
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatar}>
+            <Ionicons name="person" size={50} color={colors.primaryLight} />
+          </View>
+          <View style={styles.avatarBadge}>
+            <Ionicons name="camera" size={16} color={colors.textLight} />
+          </View>
+        </View>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>Nombre:</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.nombre}
-          onChangeText={(text) => handleChange('nombre', text)}
-        />
+        {/* Formulario */}
+        <View style={styles.form}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="person-outline" size={16} color={colors.primary} /> Nombre
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={formData.nombre}
+              onChangeText={(text) => handleChange('nombre', text)}
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
 
-        <Text style={styles.label}>Apellido:</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.apellido}
-          onChangeText={(text) => handleChange('apellido', text)}
-        />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="person-outline" size={16} color={colors.primary} /> Apellido
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={formData.apellido}
+              onChangeText={(text) => handleChange('apellido', text)}
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
 
-        <Text style={styles.label}>Usuario:</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.username}
-          onChangeText={(text) => handleChange('username', text)}
-        />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="at-outline" size={16} color={colors.primary} /> Usuario
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={formData.username}
+              onChangeText={(text) => handleChange('username', text)}
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
 
-        <Text style={styles.label}>Número de teléfono:</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="phone-pad"
-          value={formData.telefono}
-          onChangeText={(text) => handleChange('telefono', text)}
-        />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="call-outline" size={16} color={colors.primary} /> Teléfono
+            </Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="phone-pad"
+              value={formData.telefono}
+              onChangeText={(text) => handleChange('telefono', text)}
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
 
-        <Text style={styles.label}>Dirección (no editable):</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.direccion}
-          editable={false}
-        />
-      </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="home-outline" size={16} color={colors.primary} /> Dirección
+            </Text>
+            <View style={[styles.input, styles.inputDisabled]}>
+              <Text style={styles.disabledText}>{formData.direccion}</Text>
+            </View>
+            <Text style={styles.helperText}>La dirección no se puede modificar</Text>
+          </View>
+        </View>
 
-      <TouchableOpacity style={styles.saveButton} onPress={handleGuardar}>
-        <Text style={styles.saveButtonText}>Guardar</Text>
-      </TouchableOpacity>
+        {/* Botones */}
+        <TouchableOpacity style={styles.saveButton} onPress={handleGuardar} activeOpacity={0.8}>
+          <Ionicons name="checkmark-circle" size={24} color={colors.textLight} />
+          <Text style={styles.saveButtonText}>Guardar Cambios</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.cancelButtonText}>Cancelar</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+          <Text style={styles.cancelButtonText}>Cancelar</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    padding: 20,
-    backgroundColor: '#C4BDA6',
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    backgroundColor: colors.darkBlueSecondary,
+    paddingTop: 10,
+    paddingBottom: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.primary + '30',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.darkBlue,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
-    fontSize: 26,
+  headerTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#4D3226',
-    marginBottom: 20,
+    color: colors.primaryLight,
   },
-  profileImage: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: '#7C4A2D',
+  scrollContent: {
+    padding: 20,
+    paddingTop: 30,
+    alignItems: 'center',
   },
-  editPhoto: {
-    color: '#333',
+  avatarContainer: {
+    position: 'relative',
     marginBottom: 30,
-    fontSize: 14,
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.darkBlue,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: colors.primary,
+  },
+  avatarBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.buttonPrimary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: colors.background,
   },
   form: {
     width: '100%',
-    backgroundColor: '#EFE9DC',
-    padding: 20,
-    borderRadius: 12,
+    backgroundColor: colors.cardBackground,
+    padding: 24,
+    borderRadius: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    marginBottom: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
   },
   label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#4D3226',
-    marginBottom: 4,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#bbb',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 15,
-    fontSize: 15,
+    backgroundColor: colors.inputBackground,
+    borderWidth: 1.5,
+    borderColor: colors.inputBorder,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  inputDisabled: {
+    backgroundColor: colors.inputBorder + '50',
+    borderColor: colors.inputBorder,
+  },
+  disabledText: {
+    color: colors.textSecondary,
+    fontSize: 16,
+  },
+  helperText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 6,
+    fontStyle: 'italic',
   },
   saveButton: {
-    backgroundColor: '#4BB543',
-    paddingVertical: 14,
+    backgroundColor: colors.buttonPrimary,
+    paddingVertical: 16,
     paddingHorizontal: 40,
-    borderRadius: 10,
-    marginTop: 25,
-    elevation: 4,
+    borderRadius: 12,
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    width: '100%',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 6,
   },
   saveButtonText: {
-    color: '#fff',
+    color: colors.textLight,
     fontWeight: 'bold',
-    fontSize: 17,
+    fontSize: 18,
+    letterSpacing: 0.5,
   },
   cancelButton: {
-    marginTop: 12,
+    marginTop: 16,
+    paddingVertical: 12,
   },
   cancelButtonText: {
-    color: '#333',
+    color: colors.textSecondary,
     fontSize: 16,
-    textDecorationLine: 'underline',
+    fontWeight: '600',
   },
 });

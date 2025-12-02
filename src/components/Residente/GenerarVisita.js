@@ -11,8 +11,9 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
-import { Feather, FontAwesome } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { UserContext } from '../../context/userContext';
+import { colors } from '../../constants/colors';
 
 export default function GenerarVisita() {
   const navigation = useNavigation();
@@ -123,40 +124,60 @@ export default function GenerarVisita() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#C4BDA6' }}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>CREAR VISITAS</Text>
+    <View style={styles.container}>
+      <SafeAreaView style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.primaryLight} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Crear Visita</Text>
+        <View style={{ width: 40 }} />
+      </SafeAreaView>
 
-        {/* Fecha y hora */}
-        <View style={styles.row}>
-          <View style={styles.col}>
-            <Text style={styles.label}>Fecha:</Text>
-            <TouchableOpacity style={styles.inputIconRow} onPress={() => setShowDatePicker(true)}>
-              <TextInput
-                style={styles.inputIcon}
-                value={visitData.fecha}
-                placeholder="dd/mm/aaaa"
-                editable={false}
-              />
-              <Feather name="calendar" size={20} color="#333" />
-            </TouchableOpacity>
-            {errors.fecha && <Text style={styles.errorText}>{errors.fecha}</Text>}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+        {/* Card principal */}
+        <View style={styles.formCard}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="calendar" size={28} color={colors.primary} />
+            <Text style={styles.cardTitle}>Información de la Visita</Text>
           </View>
 
-          <View style={styles.col}>
-            <Text style={styles.label}>Hora:</Text>
-            <TouchableOpacity style={styles.inputIconRow} onPress={() => setShowTimePicker(true)}>
-              <TextInput
-                style={styles.inputIcon}
-                value={visitData.hora}
-                placeholder="hh:mm"
-                editable={false}
-              />
-              <FontAwesome name="clock-o" size={20} color="#333" />
-            </TouchableOpacity>
-            {errors.hora && <Text style={styles.errorText}>{errors.hora}</Text>}
+          {/* Fecha y hora */}
+          <View style={styles.dateTimeRow}>
+            <View style={styles.dateTimeCol}>
+              <Text style={styles.label}>
+                <Ionicons name="calendar-outline" size={16} color={colors.primary} /> Fecha
+              </Text>
+              <TouchableOpacity 
+                style={[styles.input, styles.inputWithIcon]} 
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.inputText, !visitData.fecha && styles.placeholder]}>
+                  {visitData.fecha || 'Seleccionar fecha'}
+                </Text>
+                <Ionicons name="calendar" size={20} color={colors.primary} />
+              </TouchableOpacity>
+              {errors.fecha && <Text style={styles.errorText}>{errors.fecha}</Text>}
+            </View>
+
+            <View style={styles.dateTimeCol}>
+              <Text style={styles.label}>
+                <Ionicons name="time-outline" size={16} color={colors.primary} /> Hora
+              </Text>
+              <TouchableOpacity 
+                style={[styles.input, styles.inputWithIcon]} 
+                onPress={() => setShowTimePicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.inputText, !visitData.hora && styles.placeholder]}>
+                  {visitData.hora || 'Seleccionar hora'}
+                </Text>
+                <Ionicons name="time" size={20} color={colors.primary} />
+              </TouchableOpacity>
+              {errors.hora && <Text style={styles.errorText}>{errors.hora}</Text>}
+            </View>
           </View>
-        </View>
 
         {showDatePicker && (
           <DateTimePicker
@@ -177,213 +198,379 @@ export default function GenerarVisita() {
           />
         )}
 
-        <Text style={styles.label}>Número de personas: *</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          value={visitData.personas}
-          onChangeText={text => handleChange('personas', text)}
-        />
-        {errors.personas && <Text style={styles.errorText}>{errors.personas}</Text>}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="people-outline" size={16} color={colors.primary} /> Número de personas *
+            </Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              placeholder="Ej: 2"
+              placeholderTextColor={colors.textSecondary}
+              value={visitData.personas}
+              onChangeText={text => handleChange('personas', text)}
+            />
+            {errors.personas && <Text style={styles.errorText}>{errors.personas}</Text>}
+          </View>
 
-        <Text style={styles.label}>Descripción: *</Text>
-        <TextInput
-          style={[styles.input, { height: 60 }]}
-          multiline
-          value={visitData.descripcion}
-          onChangeText={text => handleChange('descripcion', text)}
-        />
-        {errors.descripcion && <Text style={styles.errorText}>{errors.descripcion}</Text>}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="document-text-outline" size={16} color={colors.primary} /> Descripción *
+            </Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              multiline
+              numberOfLines={4}
+              placeholder="Describe el motivo de la visita..."
+              placeholderTextColor={colors.textSecondary}
+              value={visitData.descripcion}
+              onChangeText={text => handleChange('descripcion', text)}
+            />
+            {errors.descripcion && <Text style={styles.errorText}>{errors.descripcion}</Text>}
+          </View>
 
-        <Text style={styles.label}>Tipo de visita: *</Text>
-        <View style={styles.row}>
-          <TouchableOpacity
-            style={[styles.tipoButton, visitData.tipo === 'Familiar' && styles.tipoActivo]}
-            onPress={() => handleChange('tipo', 'Familiar')}
-          >
-            <Feather name="users" size={20} color="#333" style={{ marginRight: 6 }} />
-            <Text style={styles.tipoText}>Familiar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tipoButton, visitData.tipo === 'Técnica' && styles.tipoActivo]}
-            onPress={() => handleChange('tipo', 'Técnica')}
-          >
-            <Feather name="tool" size={20} color="#333" style={{ marginRight: 6 }} />
-            <Text style={styles.tipoText}>Técnica</Text>
-          </TouchableOpacity>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="briefcase-outline" size={16} color={colors.primary} /> Tipo de visita *
+            </Text>
+            <View style={styles.tipoRow}>
+              <TouchableOpacity
+                style={[styles.tipoButton, visitData.tipo === 'Familiar' && styles.tipoActivo]}
+                onPress={() => handleChange('tipo', 'Familiar')}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name="people" 
+                  size={20} 
+                  color={visitData.tipo === 'Familiar' ? colors.textLight : colors.primary} 
+                />
+                <Text style={[styles.tipoText, visitData.tipo === 'Familiar' && styles.tipoTextActive]}>
+                  Familiar
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tipoButton, visitData.tipo === 'Técnica' && styles.tipoActivo]}
+                onPress={() => handleChange('tipo', 'Técnica')}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name="construct" 
+                  size={20} 
+                  color={visitData.tipo === 'Técnica' ? colors.textLight : colors.primary} 
+                />
+                <Text style={[styles.tipoText, visitData.tipo === 'Técnica' && styles.tipoTextActive]}>
+                  Técnica
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {errors.tipo && <Text style={styles.errorText}>{errors.tipo}</Text>}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="car-outline" size={16} color={colors.primary} /> Placas de vehículo
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="000-00-00 (opcional)"
+              placeholderTextColor={colors.textSecondary}
+              value={visitData.placa}
+              onChangeText={text => handleChange('placa', text)}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="location" size={16} color={colors.primary} /> Dirección a visitar
+            </Text>
+            <View style={[styles.input, styles.inputDisabled]}>
+              <Text style={styles.disabledText}>{visitData.unidad || 'No disponible'}</Text>
+            </View>
+            {errors.unidad && <Text style={styles.errorText}>{errors.unidad}</Text>}
+          </View>
         </View>
-        {errors.tipo && <Text style={styles.errorText}>{errors.tipo}</Text>}
 
-        <Text style={styles.label}>Placas de vehículo:</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="000-00-00"
-          value={visitData.placa}
-          onChangeText={text => handleChange('placa', text)}
-        />
+        {/* Card de seguridad */}
+        <View style={styles.formCard}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="lock-closed" size={28} color={colors.primary} />
+            <Text style={styles.cardTitle}>Seguridad</Text>
+          </View>
 
-        <Text style={styles.label}>Contraseña: *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Palabra clave"
-          value={visitData.contrasena}
-          onChangeText={text => handleChange('contrasena', text)}
-        />
-        {errors.contrasena && <Text style={styles.errorText}>{errors.contrasena}</Text>}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="key-outline" size={16} color={colors.primary} /> Contraseña de acceso *
+            </Text>
+            <TextInput
+              style={styles.input}
+              secureTextEntry
+              placeholder="Mínimo 6 caracteres"
+              placeholderTextColor={colors.textSecondary}
+              value={visitData.contrasena}
+              onChangeText={text => handleChange('contrasena', text)}
+            />
+            {errors.contrasena && <Text style={styles.errorText}>{errors.contrasena}</Text>}
+          </View>
 
-        <Text style={styles.label}>Verificar contraseña: *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Repetir palabra clave"
-          value={visitData.verificarContrasena}
-          onChangeText={text => handleChange('verificarContrasena', text)}
-        />
-        {errors.verificarContrasena && <Text style={styles.errorText}>{errors.verificarContrasena}</Text>}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="checkmark-circle-outline" size={16} color={colors.primary} /> Verificar contraseña *
+            </Text>
+            <TextInput
+              style={styles.input}
+              secureTextEntry
+              placeholder="Repite la contraseña"
+              placeholderTextColor={colors.textSecondary}
+              value={visitData.verificarContrasena}
+              onChangeText={text => handleChange('verificarContrasena', text)}
+            />
+            {errors.verificarContrasena && <Text style={styles.errorText}>{errors.verificarContrasena}</Text>}
+          </View>
+        </View>
 
-        <Text style={styles.label}>Número de casa (automático):</Text>
-        <TextInput
-          style={styles.input}
-          value={visitData.unidad}
-          editable={false}
-        />
-        {errors.unidad && <Text style={styles.errorText}>{errors.unidad}</Text>}
+        {/* Card de visitante */}
+        <View style={styles.formCard}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="person-outline" size={28} color={colors.primary} />
+            <Text style={styles.cardTitle}>Datos del Visitante</Text>
+          </View>
 
-        <Text style={styles.label}>Nombre del visitante: *</Text>
-        <TextInput
-          style={styles.input}
-          value={visitData.visitante}
-          onChangeText={text => handleChange('visitante', text)}
-        />
-        {errors.visitante && <Text style={styles.errorText}>{errors.visitante}</Text>}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="person" size={16} color={colors.primary} /> Nombre del visitante *
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Nombre completo"
+              placeholderTextColor={colors.textSecondary}
+              value={visitData.visitante}
+              onChangeText={text => handleChange('visitante', text)}
+            />
+            {errors.visitante && <Text style={styles.errorText}>{errors.visitante}</Text>}
+          </View>
+        </View>
 
-        <TouchableOpacity style={styles.button} onPress={handleGuardar}>
-          <Text style={styles.buttonText}>Crear visita</Text>
+        <TouchableOpacity style={styles.button} onPress={handleGuardar} activeOpacity={0.8}>
+          <Ionicons name="checkmark-circle" size={24} color={colors.textLight} />
+          <Text style={styles.buttonText}>Crear Visita</Text>
         </TouchableOpacity>
 
         <Modal transparent={true} visible={modalVisible} animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Feather name="check-circle" size={80} color="#4BB543" />
+              <View style={styles.successIconContainer}>
+                <Ionicons name="checkmark-circle" size={80} color={colors.success} />
+              </View>
               <Text style={styles.modalText}>¡Visita creada exitosamente!</Text>
+              <Text style={styles.modalSubtext}>Serás redirigido para generar el código QR</Text>
             </View>
           </View>
         </Modal>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#C4BDA6',
-    padding: 20,
-    paddingTop: 55, // ⬅️ agrega espacio extra arriba
-    flexGrow: 1,
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    backgroundColor: colors.darkBlueSecondary,
+    paddingTop: 10,
+    paddingBottom: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.primary + '30',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.darkBlue,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
-    fontSize: 22,
+  headerTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
-    backgroundColor: '#7C4A2D',
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    color: colors.primaryLight,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  formCard: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 12,
+  },
+  cardTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+  },
+  dateTimeRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  dateTimeCol: {
+    flex: 1,
+  },
+  inputGroup: {
     marginBottom: 20,
   },
   label: {
-    fontWeight: 'bold',
-    marginTop: 10,
     fontSize: 14,
-    color: 'black',
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   input: {
-    backgroundColor: '#EDEDED',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    height: 40,
-    width: '100%',
-    marginTop: 4,
+    backgroundColor: colors.inputBackground,
+    borderWidth: 1.5,
+    borderColor: colors.inputBorder,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: colors.textPrimary,
   },
-  inputIconRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#EDEDED',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    height: 40,
-    marginTop: 4,
-  },
-  inputIcon: {
-    flex: 1,
-    marginRight: 10,
-  },
-  row: {
+  inputWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  col: {
+  inputText: {
     flex: 1,
-    marginRight: 10,
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  placeholder: {
+    color: colors.textSecondary,
+  },
+  inputDisabled: {
+    backgroundColor: colors.inputBorder + '50',
+    borderColor: colors.inputBorder,
+  },
+  disabledText: {
+    color: colors.textSecondary,
+    fontSize: 16,
+  },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+    paddingTop: 14,
+  },
+  tipoRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
   tipoButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EDEDED',
-    padding: 10,
-    borderRadius: 8,
-    flex: 1,
-    marginTop: 10,
-    marginRight: 10,
+    justifyContent: 'center',
+    backgroundColor: colors.inputBorder + '30',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.inputBorder,
+    gap: 8,
   },
   tipoActivo: {
-    backgroundColor: '#B0D9A3',
+    backgroundColor: colors.buttonPrimary,
+    borderColor: colors.buttonPrimary,
   },
   tipoText: {
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  tipoTextActive: {
+    color: colors.textLight,
   },
   button: {
-    backgroundColor: '#4D5637',
-    marginTop: 25,
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-    elevation: 5,
+    backgroundColor: colors.buttonPrimary,
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 6,
   },
   buttonText: {
-    color: 'white',
+    color: colors.textLight,
     fontWeight: 'bold',
-    fontSize: 15,
+    fontSize: 18,
+    letterSpacing: 0.5,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 12,
+    marginTop: 6,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(13, 27, 42, 0.8)',
   },
   modalContent: {
-    backgroundColor: 'white',
-    padding: 30,
-    borderRadius: 12,
+    backgroundColor: colors.cardBackground,
+    padding: 40,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    marginHorizontal: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
     elevation: 10,
   },
-  modalText: {
-    marginTop: 15,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
+  successIconContainer: {
+    marginBottom: 20,
   },
-  errorText: {
-    color: 'red',
-    fontSize: 12,
-    marginTop: 4,
-    marginBottom: 8,
+  modalText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  modalSubtext: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
 });

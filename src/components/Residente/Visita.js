@@ -1,14 +1,42 @@
 import { StyleSheet } from 'react-native';
 import React, { useContext } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { FontAwesome5, MaterialIcons, Feather, Entypo } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { UserContext } from '../../context/userContext';
+import { colors } from '../../constants/colors';
 
 export default function Visita() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { visitData } = route.params;
+  const { visitData } = route?.params || {};
+  
+  // Validar que visitData exista
+  if (!visitData) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.primaryLight} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Error</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Ionicons name="alert-circle" size={64} color={colors.error} />
+          <Text style={{ color: colors.textLight, fontSize: 18, marginTop: 20, textAlign: 'center' }}>
+            No se encontraron los datos de la visita
+          </Text>
+          <TouchableOpacity 
+            style={[styles.button, { marginTop: 30 }]} 
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.buttonText}>Volver</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
   const { user } = useContext(UserContext);
 
   const handleEnviar = async () => {
@@ -29,18 +57,37 @@ export default function Visita() {
     }
   
     try {
-      // 🔄 Convertir "9/4/2025" => Date('2025-04-09')
+      // 🔄 Convertir "10/12/2025" => Date('2025-12-10')
       const [day, month, year] = visitData.fecha.split('/');
-      const fechaISO = new Date(`${year}-${month}-${day}`);
+      // Asegurar formato de dos dígitos para mes y día
+      const monthFormatted = month.padStart(2, '0');
+      const dayFormatted = day.padStart(2, '0');
+      const fechaISO = new Date(`${year}-${monthFormatted}-${dayFormatted}`);
+      
+      // Convertir hora "10:50 p.m." a formato 24h "22:50"
+      let horaFormateada = visitData.hora;
+      if (visitData.hora.includes('p.m.') || visitData.hora.includes('PM')) {
+        const [time, period] = visitData.hora.split(' ');
+        const [hours, minutes] = time.split(':');
+        let hour24 = parseInt(hours);
+        if (hour24 !== 12) hour24 += 12;
+        horaFormateada = `${hour24}:${minutes}`;
+      } else if (visitData.hora.includes('a.m.') || visitData.hora.includes('AM')) {
+        const [time] = visitData.hora.split(' ');
+        const [hours, minutes] = time.split(':');
+        let hour24 = parseInt(hours);
+        if (hour24 === 12) hour24 = 0;
+        horaFormateada = `${hour24.toString().padStart(2, '0')}:${minutes}`;
+      }
   
-      const response = await fetch('http://192.168.0.166:4000/api/visits/save', {
+      const response = await fetch('http://192.168.0.138:4000/api/visits/save', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           fecha: fechaISO,
-          hora: visitData.hora,
+          hora: horaFormateada,
           numeroPersonas: visitData.numeroPersonas,
           descripcion: visitData.descripcion,
           tipoVisita: visitData.tipoVisita,
@@ -56,152 +103,328 @@ export default function Visita() {
   
       if (response.ok) {
         console.log('✅ Visita guardada correctamente:', result);
-        navigation.navigate('GenerarQR', { visitData: result }); // <-- Aquí ahora es "result"
+        
+        // La API puede devolver la visita en diferentes formatos
+        // Intentamos extraer la visita de diferentes estructuras posibles
+        let visitaGuardada = result;
+        
+        if (result.visit) {
+          visitaGuardada = result.visit;
+        } else if (result.data) {
+          visitaGuardada = result.data;
+        } else if (result.success && result.visit) {
+          visitaGuardada = result.visit;
+        }
+        
+        // Verificar que tenga _id antes de navegar
+        if (visitaGuardada && visitaGuardada._id) {
+          console.log('✅ Visita con ID:', visitaGuardada._id);
+          navigation.navigate('GenerarQR', { visitData: visitaGuardada });
+        } else {
+          console.error('❌ La respuesta no contiene _id:', visitaGuardada);
+          Alert.alert(
+            'Error', 
+            'La visita se creó pero no se pudo generar el QR. Intenta nuevamente.'
+          );
+        }
       }
       else {
         console.error('❌ Error al guardar visita:', result);
-        Alert.alert('Error', 'No se pudo guardar la visita.');
+        const errorMessage = result?.message || result?.error || 'No se pudo guardar la visita.';
+        Alert.alert('Error', errorMessage);
       }
     } catch (error) {
-      console.error('❌ Error de conexión:', error);
-      Alert.alert('Error', 'No se pudo conectar con el servidor.');
+      // Solo mostrar error detallado si no es un error de red genérico
+      if (error.message && !error.message.includes('Network request failed')) {
+        console.error('❌ Error de conexión:', error);
+      } else {
+        console.error('❌ Error de conexión: No se pudo conectar con el servidor');
+      }
+      Alert.alert(
+        'Error de conexión', 
+        'No se pudo conectar con el servidor. Verifica que:\n\n• El servidor esté corriendo\n• Tu dispositivo esté en la misma red WiFi\n• La IP del servidor sea correcta'
+      );
     }
   };
   
-  
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerText}>VISITA</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.primaryLight} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Resumen de Visita</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      <Text style={styles.subtitle}>Tienes una visita para el día</Text>
-      <Text style={styles.date}>
-        {visitData.fecha} | {visitData.hora}
-      </Text>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Card principal */}
+        <View style={styles.mainCard}>
+          <View style={styles.dateHeader}>
+            <Ionicons name="calendar" size={32} color={colors.primary} />
+            <View style={styles.dateContainer}>
+              <Text style={styles.dateLabel}>Fecha y Hora</Text>
+              <Text style={styles.dateText}>
+                {visitData.fecha} | {visitData.hora}
+              </Text>
+            </View>
+          </View>
 
-      <FontAwesome5 name="car" size={50} color="#333" style={styles.icon} />
+          <View style={styles.separator} />
 
-      <View style={styles.infoBox}>
-        <View style={styles.infoRow}>
-          <FontAwesome5 name="user-friends" size={20} color="#000" />
-          <Text style={styles.infoText}>{visitData.numeroPersonas} Personas</Text>
+          {/* Información de la visita */}
+          <View style={styles.infoSection}>
+            <View style={styles.infoItem}>
+              <View style={styles.infoIcon}>
+                <Ionicons name="person" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Visitante</Text>
+                <Text style={styles.infoValue}>{visitData.nombreVisitante}</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoItem}>
+              <View style={styles.infoIcon}>
+                <Ionicons name="people" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Número de Personas</Text>
+                <Text style={styles.infoValue}>{visitData.numeroPersonas} persona(s)</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoItem}>
+              <View style={styles.infoIcon}>
+                <Ionicons name="document-text" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Descripción</Text>
+                <Text style={styles.infoValue}>{visitData.descripcion}</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoItem}>
+              <View style={styles.infoIcon}>
+                <Ionicons name="briefcase" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Tipo de Visita</Text>
+                <Text style={styles.infoValue}>{visitData.tipoVisita}</Text>
+              </View>
+            </View>
+
+            {visitData.placa && (
+              <View style={styles.infoItem}>
+                <View style={styles.infoIcon}>
+                  <Ionicons name="car" size={24} color={colors.primary} />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Placas del Vehículo</Text>
+                  <Text style={styles.infoValue}>{visitData.placa}</Text>
+                </View>
+              </View>
+            )}
+
+            <View style={styles.infoItem}>
+              <View style={styles.infoIcon}>
+                <Ionicons name="home" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Dirección</Text>
+                <Text style={styles.infoValue}>{visitData.numeroCasa}</Text>
+              </View>
+            </View>
+          </View>
         </View>
 
-        <View style={styles.infoRow}>
-          <MaterialIcons name="description" size={20} color="#000" />
-          <Text style={styles.infoText}>{visitData.descripcion}</Text>
+        {/* Card de contraseña */}
+        <View style={styles.passwordCard}>
+          <View style={styles.passwordHeader}>
+            <Ionicons name="lock-closed" size={28} color={colors.primary} />
+            <Text style={styles.passwordTitle}>Contraseña de Acceso</Text>
+          </View>
+          <View style={styles.passwordBox}>
+            <Text style={styles.passwordText}>{visitData.contrasena || 'Sin contraseña'}</Text>
+          </View>
+          <Text style={styles.passwordHint}>
+            Comparte esta contraseña con el visitante para que pueda acceder
+          </Text>
         </View>
 
-        <View style={styles.infoRow}>
-          <Entypo name="location-pin" size={20} color="#000" />
-          <Text style={styles.infoText}>{visitData.tipoVisita}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <FontAwesome5 name="car-side" size={20} color="#000" />
-          <Text style={styles.infoText}>{visitData.placa}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Entypo name="home" size={20} color="#000" />
-          <Text style={styles.infoText}>Unidad {visitData.numeroCasa}</Text>
-        </View>
-      </View>
-
-      <View style={styles.passwordBox}>
-        <Text style={styles.passwordLabel}>Tu contraseña de acceso es:</Text>
-        <Text style={styles.passwordText}>{visitData.contrasena || 'Sin contraseña'}</Text>
-      </View>
-
-      <Text style={styles.name}>{visitData.nombreVisitante}</Text>
-
-      <TouchableOpacity style={styles.button} onPress={handleEnviar}>
-        <Text style={styles.buttonText}>Enviar</Text>
-      </TouchableOpacity>
+        {/* Botón de acción */}
+        <TouchableOpacity style={styles.button} onPress={handleEnviar} activeOpacity={0.8}>
+          <Ionicons name="checkmark-circle" size={24} color={colors.textLight} />
+          <Text style={styles.buttonText}>Confirmar y Enviar</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#C4BDA6',
     flex: 1,
-    alignItems: 'center',
-    padding: 45,
+    backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: '#7C4A2D',
-    paddingVertical: 10,
-    paddingHorizontal: 40,
-    borderRadius: 8,
-    elevation: 4,
-    marginBottom: 10,
+    backgroundColor: colors.darkBlueSecondary,
+    paddingTop: 50,
+    paddingBottom: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.primary + '30',
   },
-  headerText: {
-    color: 'white',
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.darkBlue,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-    fontSize: 18,
+    color: colors.primaryLight,
   },
-  subtitle: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    marginBottom: 2,
+  scrollContent: {
+    padding: 20,
+    paddingTop: 30,
   },
-  date: {
-    fontSize: 13,
-    marginBottom: 10,
-  },
-  icon: {
-    marginVertical: 20,
-  },
-  infoBox: {
-    alignSelf: 'stretch',
-    backgroundColor: '#EDEDED',
-    borderRadius: 10,
-    padding: 15,
+  mainCard: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: 20,
+    padding: 24,
     marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  infoRow: {
+  dateHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  infoText: {
-    marginLeft: 10,
-    fontSize: 14,
-    color: '#000',
-  },
-  passwordBox: {
-    backgroundColor: '#eee',
-    padding: 12,
-    borderRadius: 8,
     marginBottom: 20,
+    gap: 16,
+  },
+  dateContainer: {
+    flex: 1,
+  },
+  dateLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  dateText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: colors.inputBorder,
+    marginVertical: 20,
+  },
+  infoSection: {
+    gap: 16,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 16,
+  },
+  infoIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary + '20',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  passwordLabel: {
+  infoContent: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    lineHeight: 22,
+  },
+  passwordCard: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  passwordHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  passwordTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 5,
-    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  passwordBox: {
+    backgroundColor: colors.darkBlue,
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 12,
   },
   passwordText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  name: {
+    fontSize: 24,
     fontWeight: 'bold',
-    fontSize: 16,
-    marginBottom: 30,
+    color: colors.primaryLight,
+    letterSpacing: 2,
+  },
+  passwordHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   button: {
-    backgroundColor: '#4D5637',
-    paddingVertical: 10,
-    paddingHorizontal: 40,
-    borderRadius: 6,
+    backgroundColor: colors.buttonPrimary,
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
     elevation: 6,
   },
   buttonText: {
-    color: 'white',
+    color: colors.textLight,
     fontWeight: 'bold',
+    fontSize: 18,
+    letterSpacing: 0.5,
   },
 });

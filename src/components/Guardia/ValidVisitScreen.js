@@ -9,6 +9,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserContext } from '../../context/userContext';
+import { colors } from '../../constants/colors';
 
 export default function ValidVisitScreen() {
   const navigation = useNavigation();
@@ -24,7 +25,7 @@ export default function ValidVisitScreen() {
     const fetchData = async () => {
       if (data && data._id && !data.descripcion) {
         try {
-          const res = await fetch(`http://192.168.0.166:4000/api/visits/${data._id}`);
+          const res = await fetch(`http://192.168.0.138:4000/api/visits/${data._id}`);
           const json = await res.json();
           if (json.success) {
             setData(json.data);
@@ -86,7 +87,7 @@ export default function ValidVisitScreen() {
         }
       }
 
-      const response = await fetch(`http://192.168.0.166:4000/api/visits/status-with-evidence/${data._id}`, {
+      const response = await fetch(`http://192.168.0.138:4000/api/visits/status-with-evidence/${data._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -108,10 +109,21 @@ export default function ValidVisitScreen() {
     }
   };
 
-  const textoBoton =
-    data.estado === 'Aprobada' ? 'Finalizar visita'
-    : data.estado === 'Pendiente' ? 'Validar visita'
-    : 'Visita completada';
+  // Determinar el texto del botón según el estado de la visita
+  const getTextoBoton = () => {
+    if (data.estado === 'Pendiente') {
+      return 'Validar Entrada';
+    } else if (data.estado === 'Aprobada') {
+      return 'Registrar Salida';
+    } else if (data.estado === 'Finalizada') {
+      return 'Visita Finalizada';
+    } else if (data.estado === 'Cancelada') {
+      return 'Visita Cancelada';
+    }
+    return 'Validar Visita';
+  };
+
+  const textoBoton = getTextoBoton();
 
   if (!data || !data.descripcion) {
     return (
@@ -124,110 +136,320 @@ export default function ValidVisitScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
       <SafeAreaView style={styles.header}>
-        <TouchableOpacity onPress={() => logout(navigation)} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={24} color="#fff" />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.primaryLight} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>VALIDACIONES</Text>
+        <Text style={styles.headerTitle}>Validar Visita</Text>
+        <View style={{ width: 40 }} />
       </SafeAreaView>
 
-      <View style={styles.content}>
-        {[ // campos de verificación
-          { label: 'Palabra clave', value: data.contrasena, key: 'contrasena' },
-          { label: 'Número de personas', value: `${data.numeroPersonas} personas`, key: 'numeroPersonas' },
-          { label: 'Descripción', value: data.descripcion, key: 'descripcion' },
-          { label: 'Tipo de visita', value: data.tipoVisita, key: 'tipoVisita' },
-          { label: 'Número de casa', value: data.numeroCasa, key: 'numeroCasa' },
-          { label: 'Placas del vehículo', value: data.placasVehiculo || data.placa, key: 'placasVehiculo' },
-        ].map(({ label, value, key }) => (
-          <View key={key} style={styles.row}>
-            <View style={styles.rowHeader}>
-              <Text style={styles.label}>{label}:</Text>
-              <TouchableOpacity onPress={() => toggleVerification(key)} style={styles.checkBox}>
-                <Text style={{ color: 'white' }}>{verifications[key] ? '✔' : ''}</Text>
-              </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Información de la visita */}
+        <View style={styles.visitCard}>
+          <View style={styles.visitHeader}>
+            <Ionicons name="person-circle" size={40} color={colors.primary} />
+            <View style={styles.visitHeaderText}>
+              <Text style={styles.visitName}>{data.nombreVisitante || 'Visitante'}</Text>
+              <Text style={styles.visitDate}>
+                {new Date(data.fecha).toLocaleDateString('es-ES', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </Text>
             </View>
-            <Text style={styles.input}>{value || 'No especificado'}</Text>
           </View>
-        ))}
+        </View>
 
-        <Text style={styles.title}>Fotografías de evidencia:</Text>
-        <View style={styles.imageRow}>
-          {images.map((img, index) => (
-            <TouchableOpacity key={index} onPress={() => tomarFoto(index)} style={styles.imageBox}>
-              {img ? (
-                <Image source={{ uri: img }} style={styles.image} />
-              ) : (
-                <View style={[styles.image, { backgroundColor: '#ddd', justifyContent: 'center', alignItems: 'center' }]}>
-                  <Ionicons name="camera" size={30} color="#888" />
+        {/* Campos de verificación */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Verificaciones</Text>
+          {[
+            { label: 'Palabra clave', value: data.contrasena, key: 'contrasena', icon: 'key-outline' },
+            { label: 'Número de personas', value: `${data.numeroPersonas || 0} persona(s)`, key: 'numeroPersonas', icon: 'people-outline' },
+            { label: 'Descripción', value: data.descripcion, key: 'descripcion', icon: 'document-text-outline' },
+            { label: 'Tipo de visita', value: data.tipoVisita, key: 'tipoVisita', icon: 'briefcase-outline' },
+            { label: 'Número de casa', value: data.numeroCasa, key: 'numeroCasa', icon: 'home-outline' },
+            { label: 'Placas del vehículo', value: data.placasVehiculo || data.placa || 'N/A', key: 'placasVehiculo', icon: 'car-outline' },
+          ].map(({ label, value, key, icon }) => (
+            <TouchableOpacity 
+              key={key} 
+              style={[styles.verificationItem, verifications[key] && styles.verificationItemChecked]}
+              onPress={() => toggleVerification(key)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.verificationContent}>
+                <View style={styles.verificationIcon}>
+                  <Ionicons name={icon} size={20} color={verifications[key] ? colors.success : colors.textSecondary} />
                 </View>
-              )}
+                <View style={styles.verificationText}>
+                  <Text style={styles.verificationLabel}>{label}</Text>
+                  <Text style={styles.verificationValue}>{value || 'No especificado'}</Text>
+                </View>
+              </View>
+              <View style={[styles.checkBox, verifications[key] && styles.checkBoxChecked]}>
+                {verifications[key] && (
+                  <Ionicons name="checkmark" size={16} color={colors.textLight} />
+                )}
+              </View>
             </TouchableOpacity>
           ))}
         </View>
 
-        <Text style={styles.title}>Observaciones:</Text>
-        <TextInput
-          placeholder="Escribe tus observaciones aquí..."
-          value={comments}
-          onChangeText={setComments}
-          multiline
-          style={styles.textArea}
-        />
+        {/* Fotografías */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Fotografías de evidencia</Text>
+          <View style={styles.imageRow}>
+            {images.map((img, index) => (
+              <TouchableOpacity 
+                key={index} 
+                onPress={() => tomarFoto(index)} 
+                style={styles.imageBox}
+                activeOpacity={0.7}
+              >
+                {img ? (
+                  <Image source={{ uri: img }} style={styles.image} />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <Ionicons name="camera" size={32} color={colors.textSecondary} />
+                    <Text style={styles.imagePlaceholderText}>Foto {index + 1}</Text>
+                  </View>
+                )}
+                {img && (
+                  <View style={styles.imageBadge}>
+                    <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
-        <TouchableOpacity onPress={handleEnviar} style={styles.button}>
+        {/* Observaciones */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Observaciones</Text>
+          <TextInput
+            placeholder="Escribe tus observaciones aquí..."
+            placeholderTextColor={colors.textSecondary}
+            value={comments}
+            onChangeText={setComments}
+            multiline
+            style={styles.textArea}
+          />
+        </View>
+
+        {/* Botón de acción */}
+        <TouchableOpacity onPress={handleEnviar} style={styles.button} activeOpacity={0.8}>
+          <Ionicons name="checkmark-circle" size={24} color={colors.textLight} />
           <Text style={styles.buttonText}>{textoBoton}</Text>
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: '#C4C1AC' },
+  container: { 
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   header: {
-    backgroundColor: '#7C4A2D',
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: colors.darkBlueSecondary,
+    paddingTop: 10,
+    paddingBottom: 15,
     flexDirection: 'row',
-    position: 'relative',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.primary + '30',
   },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  logoutButton: { position: 'absolute', left: 16, top: 18 },
-  content: { padding: 16 },
-  row: { marginBottom: 10 },
-  rowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  label: { fontWeight: 'bold', color: '#333' },
-  input: {
-    backgroundColor: '#FFF', borderRadius: 8, padding: 10, marginTop: 4, color: '#333',
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.darkBlue,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  title: {
-    fontWeight: 'bold', marginTop: 16, marginBottom: 6, fontSize: 16, color: '#4D5637',
+  headerTitle: { 
+    color: colors.primaryLight, 
+    fontSize: 20, 
+    fontWeight: 'bold' 
+  },
+  content: { 
+    padding: 20,
+    paddingBottom: 40,
+  },
+  visitCard: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  visitHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+  },
+  visitHeaderText: {
+    flex: 1,
+  },
+  visitName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  visitDate: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+    marginBottom: 16,
+  },
+  verificationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.cardBackground,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: colors.inputBorder,
+  },
+  verificationItemChecked: {
+    borderColor: colors.success,
+    backgroundColor: colors.success + '10',
+  },
+  verificationContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  verificationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  verificationText: {
+    flex: 1,
+  },
+  verificationLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  verificationValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
   },
   checkBox: {
-    width: 20, height: 20, backgroundColor: '#4D5637', borderRadius: 4,
-    justifyContent: 'center', alignItems: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.inputBorder,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.inputBorder,
   },
-  imageRow: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 12 },
+  checkBoxChecked: {
+    backgroundColor: colors.success,
+    borderColor: colors.success,
+  },
+  imageRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   imageBox: {
-    width: 80, height: 80, backgroundColor: '#eee', borderRadius: 8,
+    flex: 1,
+    aspectRatio: 1,
+    backgroundColor: colors.inputBorder,
+    borderRadius: 12,
     overflow: 'hidden',
+    position: 'relative',
   },
-  image: { width: '100%', height: '100%', resizeMode: 'cover' },
+  image: { 
+    width: '100%', 
+    height: '100%', 
+    resizeMode: 'cover' 
+  },
+  imagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.inputBorder,
+    gap: 8,
+  },
+  imagePlaceholderText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  imageBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: 2,
+  },
   textArea: {
-    backgroundColor: '#FFF', borderRadius: 8, padding: 10,
-    textAlignVertical: 'top', marginBottom: 20, height: 100,
+    backgroundColor: colors.inputBackground,
+    borderRadius: 12,
+    padding: 16,
+    textAlignVertical: 'top',
+    minHeight: 120,
+    fontSize: 16,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
   },
   button: {
-    backgroundColor: '#4D5637',
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: colors.buttonPrimary,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 6,
   },
-  buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+  buttonText: { 
+    color: colors.textLight, 
+    fontWeight: 'bold', 
+    fontSize: 18,
+    letterSpacing: 0.5,
+  },
 });
