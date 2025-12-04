@@ -2,7 +2,7 @@
 // IMPORTANTE: Cambia esta IP por la IP correcta del servidor en tu red actual
 // Para encontrar la IP del servidor, ejecuta 'ipconfig' en la máquina donde corre el servidor
 // y busca la "Dirección IPv4" del adaptador activo (Wi-Fi o Ethernet)
-export const API_BASE_URL = 'http://192.168.0.138:4000'; // Cambia esta IP por la del servidor
+export const API_BASE_URL = 'http://192.168.106.151:4000'; // Cambia esta IP por la del servidor
 
 // Endpoints de la API
 export const API_ENDPOINTS = {
