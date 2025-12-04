@@ -5,6 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { UserContext } from '../../context/userContext';
 import { colors } from '../../constants/colors';
+import { API_ENDPOINTS } from '../../config/api';
 
 export default function Visita() {
   const navigation = useNavigation();
@@ -80,7 +81,7 @@ export default function Visita() {
         horaFormateada = `${hour24.toString().padStart(2, '0')}:${minutes}`;
       }
   
-      const response = await fetch('http://192.168.0.138:4000/api/visits/save', {
+      const response = await fetch(API_ENDPOINTS.SAVE_VISIT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

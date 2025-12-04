@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserContext } from '../../context/userContext';
 import { colors } from '../../constants/colors';
+import { API_ENDPOINTS, API_BASE_URL } from '../../config/api';
 
 export default function ValidVisitScreen() {
   const navigation = useNavigation();
@@ -25,7 +26,7 @@ export default function ValidVisitScreen() {
     const fetchData = async () => {
       if (data && data._id && !data.descripcion) {
         try {
-          const res = await fetch(`http://192.168.0.138:4000/api/visits/${data._id}`);
+          const res = await fetch(API_ENDPOINTS.GET_VISIT(data._id));
           const json = await res.json();
           if (json.success) {
             setData(json.data);
@@ -87,7 +88,7 @@ export default function ValidVisitScreen() {
         }
       }
 
-      const response = await fetch(`http://192.168.0.138:4000/api/visits/status-with-evidence/${data._id}`, {
+      const response = await fetch(API_ENDPOINTS.UPDATE_VISIT_STATUS_WITH_EVIDENCE(data._id), {
         method: 'PUT',
         headers: {
           'Content-Type': 'multipart/form-data',

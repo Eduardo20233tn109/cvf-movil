@@ -1,0 +1,24 @@
+// Configuración centralizada de la API
+// IMPORTANTE: Cambia esta IP por la IP correcta del servidor en tu red actual
+// Para encontrar la IP del servidor, ejecuta 'ipconfig' en la máquina donde corre el servidor
+// y busca la "Dirección IPv4" del adaptador activo (Wi-Fi o Ethernet)
+export const API_BASE_URL = 'http://192.168.109.254:4000'; // Cambia esta IP por la del servidor
+
+// Endpoints de la API
+export const API_ENDPOINTS = {
+  // Autenticación
+  LOGIN: `${API_BASE_URL}/api/users/login-mobile`,
+  UPDATE_PROFILE: `${API_BASE_URL}/api/users/update-profile`,
+  
+  // Visitas
+  VISITS: `${API_BASE_URL}/api/visits`,
+  SAVE_VISIT: `${API_BASE_URL}/api/visits/save`,
+  CANCEL_VISIT: (id) => `${API_BASE_URL}/api/visits/cancel/${id}`,
+  GET_VISIT: (id) => `${API_BASE_URL}/api/visits/${id}`,
+  UPDATE_VISIT_STATUS: (id) => `${API_BASE_URL}/api/visits/status/${id}`,
+  UPDATE_VISIT_STATUS_WITH_EVIDENCE: (id) => `${API_BASE_URL}/api/visits/status-with-evidence/${id}`,
+  
+  // Usuarios
+  CHECK_USERNAME: (username) => `${API_BASE_URL}/api/users/check-username?username=${username}`,
+};
+

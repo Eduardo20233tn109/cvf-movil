@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { UserContext } from '../../context/userContext';
 import { colors } from '../../constants/colors';
+import { API_ENDPOINTS } from '../../config/api';
 
 export default function EditProfileScreen() {
   const navigation = useNavigation();
@@ -51,7 +52,7 @@ export default function EditProfileScreen() {
 
   const checkUsernameUnique = async () => {
     try {
-      const res = await fetch(`http://192.168.0.138:4000/api/users/check-username?username=${formData.username}`);
+      const res = await fetch(API_ENDPOINTS.CHECK_USERNAME(formData.username));
       const data = await res.json();
       return data.available || data._id === user._id;
     } catch (err) {
@@ -62,7 +63,7 @@ export default function EditProfileScreen() {
 
   const handleGuardar = async () => {
     try {
-      const response = await fetch(`http://192.168.0.138:4000/api/users/update-profile`, {
+      const response = await fetch(API_ENDPOINTS.UPDATE_PROFILE, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -84,8 +85,16 @@ export default function EditProfileScreen() {
         Alert.alert('Error', result.message || 'No se pudo actualizar el perfil');
       }
     } catch (e) {
-      console.error('❌ Error al actualizar perfil:', e);
-      Alert.alert('Error', 'Algo salió mal');
+      // Solo mostrar error detallado si no es un error de red genérico
+      if (e.message && !e.message.includes('Network request failed')) {
+        console.error('❌ Error al actualizar perfil:', e);
+      } else {
+        console.error('❌ Error de conexión: No se pudo conectar con el servidor');
+      }
+      Alert.alert(
+        'Error de conexión', 
+        'No se pudo conectar con el servidor. Verifica que:\n\n• El servidor esté corriendo\n• Tu dispositivo esté en la misma red WiFi\n• La IP del servidor sea correcta'
+      );
     }
   };
   

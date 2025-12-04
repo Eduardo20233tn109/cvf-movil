@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { UserContext } from '../../context/userContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../../constants/colors';
+import { API_ENDPOINTS } from '../../config/api';
 
 const { width, height } = Dimensions.get('window');
 
@@ -132,7 +133,7 @@ export default function LoginScreen() {
     }
 
     try {
-      const response = await fetch('http://192.168.0.138:4000/api/users/login-mobile', {
+      const response = await fetch(API_ENDPOINTS.LOGIN, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),

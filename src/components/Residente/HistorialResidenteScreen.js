@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { UserContext } from '../../context/userContext';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../constants/colors';
+import { API_ENDPOINTS } from '../../config/api';
 
 const estados = ["Todos", "Pendiente", "Aprobada", "Finalizada", "Cancelada"];
 
@@ -23,7 +24,7 @@ export default function HistorialResidenteScreen() {
 
   const fetchVisitas = async (estado) => {
     try {
-      const base = `http://192.168.0.138:4000/api/visits`;
+      const base = API_ENDPOINTS.VISITS;
       
       let data = [];
       
@@ -117,7 +118,7 @@ export default function HistorialResidenteScreen() {
             onPress: async () => {
               try {
                 console.log('🔄 Cancelando visita:', item._id);
-                const res = await fetch(`http://192.168.0.138:4000/api/visits/cancel/${item._id}`, {
+                const res = await fetch(API_ENDPOINTS.CANCEL_VISIT(item._id), {
                   method: 'PUT',
                   headers: { "Content-Type": "application/json" },
                 });
