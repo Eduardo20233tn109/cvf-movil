@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserContext } from '../../context/userContext';
 import { colors } from '../../constants/colors';
 import { API_ENDPOINTS, API_BASE_URL } from '../../config/api';
+import { apiGet, apiPutFormData, apiPost } from '../../services/apiService';
 
 export default function ValidVisitScreen() {
   const navigation = useNavigation();
@@ -26,7 +27,7 @@ export default function ValidVisitScreen() {
     const fetchData = async () => {
       if (data && data._id && !data.descripcion) {
         try {
-          const res = await fetch(API_ENDPOINTS.GET_VISIT(data._id));
+          const res = await apiGet(API_ENDPOINTS.GET_VISIT(data._id));
           const json = await res.json();
           if (json.success) {
             setData(json.data);
@@ -88,15 +89,80 @@ export default function ValidVisitScreen() {
         }
       }
 
-      const response = await fetch(API_ENDPOINTS.UPDATE_VISIT_STATUS_WITH_EVIDENCE(data._id), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        body: formData,
-      });
+      const response = await apiPutFormData(API_ENDPOINTS.UPDATE_VISIT_STATUS_WITH_EVIDENCE(data._id), formData);
 
       if (response.ok) {
+        // Obtener el nuevo estado de la visita después de la actualización
+        const result = await response.json();
+        const nuevaVisita = result?.data || result?.visit || result;
+        const nuevoEstado = nuevaVisita?.estado || (data.estado === 'Pendiente' ? 'Aprobada' : 'Finalizada');
+        
+        // Enviar notificación al residente
+        try {
+          const residenteId = typeof data.residenteId === 'object' 
+            ? data.residenteId._id || data.residenteId 
+            : data.residenteId;
+          
+          if (residenteId) {
+            const tipoAccion = nuevoEstado === 'Aprobada' ? 'entrada' : 'salida';
+            const titulo = `Visita ${tipoAccion === 'entrada' ? 'validada' : 'finalizada'}`;
+            
+            // Crear mensaje con observaciones y verificaciones
+            let mensaje = `Tu visita ha sido ${tipoAccion === 'entrada' ? 'validada (entrada)' : 'finalizada (salida)'}.\n\n`;
+            
+            if (comments && comments.trim()) {
+              mensaje += `Observaciones:\n${comments}\n\n`;
+            }
+            
+            // Agregar información sobre verificaciones
+            const verificacionesRealizadas = Object.keys(verifications).filter(key => verifications[key]);
+            if (verificacionesRealizadas.length > 0) {
+              mensaje += `Verificaciones realizadas:\n`;
+              verificacionesRealizadas.forEach(key => {
+                const labels = {
+                  contrasena: 'Palabra clave',
+                  numeroPersonas: 'Número de personas',
+                  descripcion: 'Descripción',
+                  tipoVisita: 'Tipo de visita',
+                  numeroCasa: 'Número de casa',
+                  placasVehiculo: 'Placas del vehículo'
+                };
+                mensaje += `✓ ${labels[key] || key}\n`;
+              });
+            }
+            
+            // Enviar notificación
+            const notifResponse = await apiPost(API_ENDPOINTS.CREATE_NOTIFICATION, {
+              usuarioId: residenteId,
+              visitaId: data._id,
+              titulo: titulo,
+              mensaje: mensaje,
+              tipo: 'validacion_visita',
+              leida: false
+            });
+            
+            if (notifResponse.ok) {
+              console.log('✅ Notificación enviada al residente');
+            } else {
+              const notifError = await notifResponse.json();
+              
+              if (notifResponse.status === 404) {
+                console.log('⚠️ Endpoint de notificaciones no disponible');
+              } else if (notifResponse.status === 400) {
+                // Errores de validación del backend
+                console.warn('⚠️ Error de validación al crear notificación:', notifError.message || notifError);
+              } else if (notifResponse.status === 403) {
+                console.warn('⚠️ No tiene permiso para crear notificación');
+              } else {
+                console.warn('⚠️ Error al enviar notificación:', notifError.message || notifError);
+              }
+            }
+          }
+        } catch (notifError) {
+          console.error('⚠️ Error al enviar notificación (la visita se guardó correctamente):', notifError);
+          // No mostramos error al usuario si falla la notificación, ya que la visita se guardó bien
+        }
+        
         Alert.alert('Validación completa', 'La visita ha sido actualizada correctamente');
         navigation.reset({ index: 0, routes: [{ name: 'HomeGuardia' }] });
       } else {

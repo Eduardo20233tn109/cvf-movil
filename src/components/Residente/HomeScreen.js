@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,78 @@ import {
   Animated,
   TouchableWithoutFeedback
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../../context/userContext';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
+import { API_ENDPOINTS } from '../../config/api';
+import { apiGet } from '../../services/apiService';
 
 export default function HomeResidente() {
   const { user, logout } = useUser(); // ✅ accede al usuario correctamente
   const navigation = useNavigation();
   const [menuVisible, setMenuVisible] = useState(false);
   const menuAnimation = useState(new Animated.Value(-280))[0];
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Cargar notificaciones no leídas
+  const fetchUnreadCount = async () => {
+    if (!user?._id) return;
+    
+    try {
+      // Primero intentar usar el endpoint optimizado de conteo
+      const countResponse = await apiGet(API_ENDPOINTS.GET_UNREAD_COUNT(user._id));
+      
+      if (countResponse.ok) {
+        const countData = await countResponse.json();
+        setUnreadCount(countData.count || 0);
+        return;
+      }
+      
+      // Si el endpoint de conteo no existe, obtener todas y contar
+      if (countResponse.status === 404) {
+        const response = await apiGet(API_ENDPOINTS.GET_NOTIFICATIONS(user._id));
+        const data = await response.json();
+        
+        if (response.ok) {
+          // Manejar diferentes formatos de respuesta
+          let notificationsArray = [];
+          
+          if (Array.isArray(data)) {
+            notificationsArray = data;
+          } else if (data && Array.isArray(data.notifications)) {
+            notificationsArray = data.notifications;
+          } else if (data && Array.isArray(data.data)) {
+            notificationsArray = data.data;
+          }
+          
+          const unread = notificationsArray.filter(n => !n.leida).length;
+          setUnreadCount(unread);
+        } else {
+          setUnreadCount(0);
+        }
+      } else {
+        setUnreadCount(0);
+      }
+    } catch (error) {
+      // Silenciar errores de red para no molestar al usuario
+      if (error.message && !error.message.includes('Network request failed')) {
+        console.error('Error al obtener conteo de notificaciones:', error);
+      }
+      setUnreadCount(0);
+    }
+  };
+
+  // Cargar cuando se enfoca la pantalla
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchUnreadCount();
+    }, [user?._id])
+  );
+
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [user?._id]);
 
   const toggleMenu = () => {
     const toValue = menuVisible ? -280 : 0;
@@ -48,9 +110,24 @@ export default function HomeResidente() {
           </View>
           <Text style={styles.headerTitle}>CVF</Text>
         </View>
-        <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={22} color={colors.primaryLight} />
-        </TouchableOpacity>
+        <View style={styles.headerRightButtons}>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('NotificationsScreen')} 
+            style={styles.notificationButton}
+          >
+            <Ionicons name="notifications-outline" size={22} color={colors.primaryLight} />
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={logout} style={styles.logoutButton}>
+            <Ionicons name="log-out-outline" size={22} color={colors.primaryLight} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* OVERLAY OSCURO cuando el menú está abierto */}
@@ -100,6 +177,23 @@ export default function HomeResidente() {
           <Ionicons name="calendar-outline" size={24} color={colors.textLight} />
           <Text style={styles.menuText}>Visitas</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem} onPress={() => {
+          navigation.navigate('NotificationsScreen');
+          toggleMenu();
+        }}>
+          <Ionicons name="notifications-outline" size={24} color={colors.textLight} />
+          <View style={styles.menuItemTextContainer}>
+            <Text style={styles.menuText}>Notificaciones</Text>
+            {unreadCount > 0 && (
+              <View style={styles.menuBadge}>
+                <Text style={styles.menuBadgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
       </Animated.View>
 
       {/* CONTENIDO PRINCIPAL */}
@@ -114,18 +208,6 @@ export default function HomeResidente() {
 
           <View style={styles.iconContainer}>
             <Ionicons name="calendar" size={60} color={colors.primary} />
-          </View>
-
-          <TouchableOpacity 
-            style={styles.button} 
-            onPress={() => navigation.navigate('GenerarQR')}
-          >
-            <Ionicons name="link" size={24} color={colors.textLight} style={styles.buttonIcon} />
-            <Text style={styles.buttonText}>Generar enlace</Text>
-          </TouchableOpacity>
-
-          <View style={styles.iconContainer}>
-            <Ionicons name="qr-code" size={60} color={colors.primary} />
           </View>
         </View>
     </View>
@@ -167,6 +249,39 @@ const styles = StyleSheet.create({
     backgroundColor: colors.darkBlue,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  headerRightButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  notificationButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.darkBlue,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: colors.error,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.darkBlueSecondary,
+  },
+  notificationBadgeText: {
+    color: colors.textLight,
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   logoutButton: {
     width: 40,
@@ -274,11 +389,32 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: colors.darkBlue + '50',
   },
+  menuItemTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'space-between',
+  },
   menuText: {
     color: colors.textLight,
     fontWeight: '600',
     fontSize: 16,
     marginLeft: 15,
+  },
+  menuBadge: {
+    backgroundColor: colors.error,
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  menuBadgeText: {
+    color: colors.textLight,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   mainContent: {
     flex: 1,

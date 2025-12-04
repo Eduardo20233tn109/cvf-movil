@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { UserContext } from '../../context/userContext';
 import { colors } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../config/api';
+import { apiPost } from '../../services/apiService';
 
 export default function Visita() {
   const navigation = useNavigation();
@@ -81,23 +82,17 @@ export default function Visita() {
         horaFormateada = `${hour24.toString().padStart(2, '0')}:${minutes}`;
       }
   
-      const response = await fetch(API_ENDPOINTS.SAVE_VISIT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fecha: fechaISO,
-          hora: horaFormateada,
-          numeroPersonas: visitData.numeroPersonas,
-          descripcion: visitData.descripcion,
-          tipoVisita: visitData.tipoVisita,
-          placasVehiculo: visitData.placa,
-          contrasena: visitData.contrasena,
-          numeroCasa: visitData.numeroCasa,
-          nombreVisitante: visitData.nombreVisitante,
-          residenteId: visitData.residenteId,
-        }),
+      const response = await apiPost(API_ENDPOINTS.SAVE_VISIT, {
+        fecha: fechaISO,
+        hora: horaFormateada,
+        numeroPersonas: visitData.numeroPersonas,
+        descripcion: visitData.descripcion,
+        tipoVisita: visitData.tipoVisita,
+        placasVehiculo: visitData.placa,
+        contrasena: visitData.contrasena,
+        numeroCasa: visitData.numeroCasa,
+        nombreVisitante: visitData.nombreVisitante,
+        residenteId: visitData.residenteId,
       });
   
       const result = await response.json();

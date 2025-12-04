@@ -13,6 +13,7 @@ import { UserContext } from '../../context/userContext';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../config/api';
+import { apiGet } from '../../services/apiService';
 
 const estados = ['Todos', 'Pendiente', 'Aprobada', 'Finalizada', 'Cancelada'];
 
@@ -35,7 +36,7 @@ export default function HistoryScreen() {
         const promesas = estados.map(async (est) => {
           try {
             const url = `${base}?estado=${est}&_=${Date.now()}`;
-            const response = await fetch(url);
+            const response = await apiGet(url);
             if (response.ok) {
               const datos = await response.json();
               return Array.isArray(datos) ? datos : [];
@@ -54,7 +55,7 @@ export default function HistoryScreen() {
       } else {
         // Para estados específicos, hacer una sola petición
         const url = `${base}?estado=${estado}&_=${Date.now()}`;
-        const response = await fetch(url);
+        const response = await apiGet(url);
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);

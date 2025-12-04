@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { UserContext } from '../../context/userContext';
 import { colors } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../config/api';
+import { apiGet, apiPut } from '../../services/apiService';
 
 export default function EditProfileScreen() {
   const navigation = useNavigation();
@@ -52,7 +53,7 @@ export default function EditProfileScreen() {
 
   const checkUsernameUnique = async () => {
     try {
-      const res = await fetch(API_ENDPOINTS.CHECK_USERNAME(formData.username));
+      const res = await apiGet(API_ENDPOINTS.CHECK_USERNAME(formData.username));
       const data = await res.json();
       return data.available || data._id === user._id;
     } catch (err) {
@@ -63,16 +64,12 @@ export default function EditProfileScreen() {
 
   const handleGuardar = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.UPDATE_PROFILE, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user._id,
-          nombre: formData.nombre,
-          apellido: formData.apellido,
-          telefono: formData.telefono,
-          correo: formData.username,
-        }),
+      const response = await apiPut(API_ENDPOINTS.UPDATE_PROFILE, {
+        userId: user._id,
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        telefono: formData.telefono,
+        correo: formData.username,
       });
   
       const result = await response.json();

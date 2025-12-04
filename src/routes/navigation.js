@@ -14,6 +14,7 @@ import Visita from '../components/Residente/Visita';
 import GenerarQR from '../components/Residente/GenerarQR';
 import ValidVisitScreen from '../components/Guardia/ValidVisitScreen';
 import HistorialResidenteScreen from '../components/Residente/HistorialResidenteScreen';
+import NotificationsScreen from '../components/Residente/NotificationsScreen';
 
 
 const Stack = createNativeStackNavigator();
@@ -51,6 +52,7 @@ export default function Navigation() {
       <Stack.Screen name="GenerarQR" component={GenerarQR} />
       <Stack.Screen name="ValidVisitScreen" component={ValidVisitScreen} />
       <Stack.Screen name="HistorialResidenteScreen" component={HistorialResidenteScreen} />
+      <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
     </Stack.Navigator>
   );
 }

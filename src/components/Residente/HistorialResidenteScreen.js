@@ -7,6 +7,7 @@ import { UserContext } from '../../context/userContext';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../config/api';
+import { apiGet, apiPut } from '../../services/apiService';
 
 const estados = ["Todos", "Pendiente", "Aprobada", "Finalizada", "Cancelada"];
 
@@ -36,7 +37,7 @@ export default function HistorialResidenteScreen() {
         const promesas = estados.map(async (est) => {
           try {
             const url = `${base}?estado=${est}&_=${Date.now()}`;
-            const res = await fetch(url);
+            const res = await apiGet(url);
             if (res.ok) {
               const datos = await res.json();
               return Array.isArray(datos) ? datos : [];
@@ -56,7 +57,7 @@ export default function HistorialResidenteScreen() {
         // Para estados específicos, hacer una sola petición
         const url = `${base}?estado=${estado}&_=${Date.now()}`;
         console.log('📡 Obteniendo visitas con URL:', url);
-        const res = await fetch(url);
+        const res = await apiGet(url);
         
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
@@ -118,10 +119,7 @@ export default function HistorialResidenteScreen() {
             onPress: async () => {
               try {
                 console.log('🔄 Cancelando visita:', item._id);
-                const res = await fetch(API_ENDPOINTS.CANCEL_VISIT(item._id), {
-                  method: 'PUT',
-                  headers: { "Content-Type": "application/json" },
-                });
+                const res = await apiPut(API_ENDPOINTS.CANCEL_VISIT(item._id), {});
 
                 const result = await res.json();
                 console.log('📋 Respuesta completa de cancelación:', JSON.stringify(result, null, 2));

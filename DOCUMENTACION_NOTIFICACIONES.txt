@@ -1,0 +1,599 @@
+================================================================================
+DOCUMENTACIÓN DEL SISTEMA DE NOTIFICACIONES
+CVF Móvil - Frontend a Backend
+================================================================================
+
+FECHA: 2024
+DESCRIPCIÓN: Sistema de notificaciones entre Guardia y Residente
+             cuando el guardia valida entradas y salidas de visitas
+
+================================================================================
+1. DESCRIPCIÓN GENERAL
+================================================================================
+
+El sistema permite que cuando un guardia valida una entrada o salida de una 
+visita, se envíe automáticamente una notificación al residente que creó esa 
+visita. La notificación incluye:
+- Observaciones del guardia
+- Verificaciones realizadas (qué campos fueron validados)
+- Estado de la visita (validada/finalizada)
+
+El residente puede ver sus notificaciones, marcarlas como leídas, y tiene un 
+contador de notificaciones no leídas en su pantalla principal.
+
+================================================================================
+2. ENDPOINTS REQUERIDOS EN EL BACKEND
+================================================================================
+
+2.1. OBTENER NOTIFICACIONES DE UN USUARIO
+------------------------------------------
+Método: GET
+URL: /api/notifications?userId={userId}
+
+Parámetros de Query:
+- userId (String, requerido): ID del usuario (residente)
+
+Ejemplo de Request:
+GET http://192.168.0.138:4000/api/notifications?userId=507f1f77bcf86cd799439011
+
+Respuesta Exitosa (200 OK):
+[
+  {
+    "_id": "507f1f77bcf86cd799439012",
+    "usuarioId": "507f1f77bcf86cd799439011",
+    "visitaId": "507f1f77bcf86cd799439013",
+    "titulo": "Visita validada",
+    "mensaje": "Tu visita ha sido validada (entrada).\n\nObservaciones:\nTodo correcto, visitante identificado.\n\nVerificaciones realizadas:\n✓ Palabra clave\n✓ Número de personas\n✓ Número de casa\n",
+    "tipo": "validacion_visita",
+    "leida": false,
+    "createdAt": "2024-01-15T10:30:00.000Z"
+  },
+  {
+    "_id": "507f1f77bcf86cd799439014",
+    "usuarioId": "507f1f77bcf86cd799439011",
+    "visitaId": "507f1f77bcf86cd799439015",
+    "titulo": "Visita finalizada",
+    "mensaje": "Tu visita ha sido finalizada (salida).\n\nObservaciones:\nSalida registrada correctamente.\n",
+    "tipo": "validacion_visita",
+    "leida": true,
+    "createdAt": "2024-01-14T18:45:00.000Z"
+  }
+]
+
+Respuesta cuando no hay notificaciones (200 OK):
+[]
+
+Respuesta de Error (404):
+{
+  "message": "Ruta no encontrada"
+}
+
+NOTAS:
+- El array debe estar ordenado por fecha (más recientes primero) o el frontend lo ordenará
+- El campo "leida" es booleano (true/false)
+- El campo "createdAt" debe ser una fecha ISO 8601
+- El campo "tipo" actualmente solo usa "validacion_visita" pero puede extenderse
+
+
+2.2. CREAR NOTIFICACIÓN
+-----------------------
+Método: POST
+URL: /api/notifications
+
+Headers:
+Content-Type: application/json
+
+Body (JSON):
+{
+  "usuarioId": "507f1f77bcf86cd799439011",
+  "visitaId": "507f1f77bcf86cd799439013",
+  "titulo": "Visita validada",
+  "mensaje": "Tu visita ha sido validada (entrada).\n\nObservaciones:\nTodo correcto.\n\nVerificaciones realizadas:\n✓ Palabra clave\n✓ Número de personas\n",
+  "tipo": "validacion_visita",
+  "leida": false
+}
+
+Ejemplo de Request:
+POST http://192.168.0.138:4000/api/notifications
+Content-Type: application/json
+
+{
+  "usuarioId": "507f1f77bcf86cd799439011",
+  "visitaId": "507f1f77bcf86cd799439013",
+  "titulo": "Visita validada",
+  "mensaje": "Tu visita ha sido validada (entrada).\n\nObservaciones:\nTodo correcto.\n\nVerificaciones realizadas:\n✓ Palabra clave\n✓ Número de personas\n",
+  "tipo": "validacion_visita",
+  "leida": false
+}
+
+Respuesta Exitosa (201 Created o 200 OK):
+{
+  "_id": "507f1f77bcf86cd799439016",
+  "usuarioId": "507f1f77bcf86cd799439011",
+  "visitaId": "507f1f77bcf86cd799439013",
+  "titulo": "Visita validada",
+  "mensaje": "Tu visita ha sido validada (entrada).\n\nObservaciones:\nTodo correcto.\n\nVerificaciones realizadas:\n✓ Palabra clave\n✓ Número de personas\n",
+  "tipo": "validacion_visita",
+  "leida": false,
+  "createdAt": "2024-01-15T10:30:00.000Z"
+}
+
+Respuesta de Error (400 Bad Request):
+{
+  "message": "Datos inválidos",
+  "errors": ["usuarioId es requerido", "visitaId es requerido"]
+}
+
+Respuesta de Error (404):
+{
+  "message": "Usuario no encontrado"
+}
+
+
+2.3. MARCAR NOTIFICACIÓN COMO LEÍDA
+------------------------------------
+Método: PUT
+URL: /api/notifications/{id}/read
+
+Parámetros de Ruta:
+- id (String, requerido): ID de la notificación
+
+Ejemplo de Request:
+PUT http://192.168.0.138:4000/api/notifications/507f1f77bcf86cd799439012/read
+
+Respuesta Exitosa (200 OK):
+{
+  "_id": "507f1f77bcf86cd799439012",
+  "usuarioId": "507f1f77bcf86cd799439011",
+  "visitaId": "507f1f77bcf86cd799439013",
+  "titulo": "Visita validada",
+  "mensaje": "...",
+  "tipo": "validacion_visita",
+  "leida": true,
+  "createdAt": "2024-01-15T10:30:00.000Z",
+  "updatedAt": "2024-01-15T11:00:00.000Z"
+}
+
+Respuesta de Error (404):
+{
+  "message": "Notificación no encontrada"
+}
+
+
+2.4. MARCAR TODAS LAS NOTIFICACIONES COMO LEÍDAS
+-------------------------------------------------
+Método: PUT
+URL: /api/notifications/read-all?userId={userId}
+
+Parámetros de Query:
+- userId (String, requerido): ID del usuario
+
+Ejemplo de Request:
+PUT http://192.168.0.138:4000/api/notifications/read-all?userId=507f1f77bcf86cd799439011
+
+Respuesta Exitosa (200 OK):
+{
+  "message": "Todas las notificaciones han sido marcadas como leídas",
+  "updatedCount": 5
+}
+
+Respuesta de Error (404):
+{
+  "message": "Usuario no encontrado"
+}
+
+
+================================================================================
+3. ESTRUCTURA DE DATOS - MODELO DE NOTIFICACIÓN
+================================================================================
+
+Esquema sugerido para MongoDB (o tu base de datos):
+
+{
+  _id: ObjectId,                    // ID único de la notificación
+  usuarioId: ObjectId,              // Referencia al usuario (residente)
+  visitaId: ObjectId,               // Referencia a la visita relacionada
+  titulo: String,                    // Título de la notificación
+  mensaje: String,                  // Mensaje completo con observaciones
+  tipo: String,                      // Tipo: "validacion_visita", etc.
+  leida: Boolean,                    // false por defecto
+  createdAt: Date,                  // Fecha de creación
+  updatedAt: Date                    // Fecha de última actualización
+}
+
+Índices recomendados:
+- usuarioId (para búsquedas rápidas por usuario)
+- leida (para filtrar no leídas)
+- createdAt (para ordenar por fecha)
+- Compuesto: { usuarioId: 1, leida: 1, createdAt: -1 }
+
+
+================================================================================
+4. FLUJO DE FUNCIONAMIENTO
+================================================================================
+
+4.1. CUANDO EL GUARDIA VALIDA UNA VISITA
+-----------------------------------------
+1. El guardia escanea el QR de la visita o selecciona una visita
+2. El guardia verifica los campos (palabra clave, número de personas, etc.)
+3. El guardia toma fotos de evidencia (opcional)
+4. El guardia escribe observaciones
+5. El guardia presiona "Validar Entrada" o "Registrar Salida"
+
+Código del Frontend (ValidVisitScreen.js):
+- Endpoint usado: PUT /api/visits/status-with-evidence/{visitId}
+- Después de actualizar la visita exitosamente, se envía la notificación
+
+6. El frontend envía automáticamente una notificación al residente:
+   POST /api/notifications
+   {
+     "usuarioId": "{residenteId}",
+     "visitaId": "{visitId}",
+     "titulo": "Visita validada" o "Visita finalizada",
+     "mensaje": "{mensaje con observaciones y verificaciones}",
+     "tipo": "validacion_visita",
+     "leida": false
+   }
+
+7. El backend crea la notificación en la base de datos
+
+
+4.2. CUANDO EL RESIDENTE VE SUS NOTIFICACIONES
+-----------------------------------------------
+1. El residente abre la pantalla de notificaciones
+2. El frontend hace una petición:
+   GET /api/notifications?userId={userId}
+
+3. El backend retorna todas las notificaciones del usuario
+4. El frontend las muestra ordenadas por fecha (más recientes primero)
+5. Las notificaciones no leídas se muestran con un indicador visual
+
+
+4.3. CUANDO EL RESIDENTE MARCA UNA NOTIFICACIÓN COMO LEÍDA
+-----------------------------------------------------------
+1. El residente toca una notificación no leída
+2. El frontend hace una petición:
+   PUT /api/notifications/{notificationId}/read
+
+3. El backend actualiza el campo "leida" a true
+4. El frontend actualiza la UI localmente
+
+
+4.4. CONTADOR DE NOTIFICACIONES NO LEÍDAS
+------------------------------------------
+1. En la pantalla principal del residente, se muestra un contador
+2. Cada vez que se carga la pantalla, se hace:
+   GET /api/notifications?userId={userId}
+
+3. El frontend cuenta las notificaciones con "leida": false
+4. Se muestra un badge con el número en el icono de notificaciones
+
+
+================================================================================
+5. CÓDIGO DEL FRONTEND - REFERENCIA
+================================================================================
+
+5.1. CONFIGURACIÓN DE ENDPOINTS (src/config/api.js)
+---------------------------------------------------
+export const API_ENDPOINTS = {
+  // ... otros endpoints ...
+  
+  // Notificaciones
+  NOTIFICATIONS: `${API_BASE_URL}/api/notifications`,
+  GET_NOTIFICATIONS: (userId) => `${API_BASE_URL}/api/notifications?userId=${userId}`,
+  MARK_NOTIFICATION_READ: (id) => `${API_BASE_URL}/api/notifications/${id}/read`,
+  MARK_ALL_READ: (userId) => `${API_BASE_URL}/api/notifications/read-all?userId=${userId}`,
+  CREATE_NOTIFICATION: `${API_BASE_URL}/api/notifications`,
+};
+
+
+5.2. ENVÍO DE NOTIFICACIÓN AL VALIDAR VISITA (src/components/Guardia/ValidVisitScreen.js)
+---------------------------------------------------------------------------------------------
+Después de actualizar la visita exitosamente:
+
+const residenteId = typeof data.residenteId === 'object' 
+  ? data.residenteId._id || data.residenteId 
+  : data.residenteId;
+
+if (residenteId) {
+  const tipoAccion = nuevoEstado === 'Aprobada' ? 'entrada' : 'salida';
+  const titulo = `Visita ${tipoAccion === 'entrada' ? 'validada' : 'finalizada'}`;
+  
+  // Crear mensaje con observaciones y verificaciones
+  let mensaje = `Tu visita ha sido ${tipoAccion === 'entrada' ? 'validada (entrada)' : 'finalizada (salida)'}.\n\n`;
+  
+  if (comments && comments.trim()) {
+    mensaje += `Observaciones:\n${comments}\n\n`;
+  }
+  
+  // Agregar información sobre verificaciones
+  const verificacionesRealizadas = Object.keys(verifications).filter(key => verifications[key]);
+  if (verificacionesRealizadas.length > 0) {
+    mensaje += `Verificaciones realizadas:\n`;
+    verificacionesRealizadas.forEach(key => {
+      const labels = {
+        contrasena: 'Palabra clave',
+        numeroPersonas: 'Número de personas',
+        descripcion: 'Descripción',
+        tipoVisita: 'Tipo de visita',
+        numeroCasa: 'Número de casa',
+        placasVehiculo: 'Placas del vehículo'
+      };
+      mensaje += `✓ ${labels[key] || key}\n`;
+    });
+  }
+  
+  // Enviar notificación
+  await fetch(API_ENDPOINTS.CREATE_NOTIFICATION, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      usuarioId: residenteId,
+      visitaId: data._id,
+      titulo: titulo,
+      mensaje: mensaje,
+      tipo: 'validacion_visita',
+      leida: false
+    }),
+  });
+}
+
+
+5.3. OBTENER NOTIFICACIONES (src/components/Residente/NotificationsScreen.js)
+------------------------------------------------------------------------------
+const fetchNotifications = async () => {
+  const response = await fetch(API_ENDPOINTS.GET_NOTIFICATIONS(user._id));
+  const data = await response.json();
+  
+  if (response.ok) {
+    // Manejar diferentes formatos de respuesta
+    let notificationsArray = [];
+    
+    if (Array.isArray(data)) {
+      notificationsArray = data;
+    } else if (data && Array.isArray(data.notifications)) {
+      notificationsArray = data.notifications;
+    } else if (data && Array.isArray(data.data)) {
+      notificationsArray = data.data;
+    }
+    
+    // Ordenar por fecha más reciente primero
+    const sorted = notificationsArray.sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.fechaCreacion || 0);
+      const dateB = new Date(b.createdAt || b.fechaCreacion || 0);
+      return dateB - dateA;
+    });
+    
+    setNotifications(sorted);
+  }
+};
+
+
+5.4. CONTADOR DE NOTIFICACIONES NO LEÍDAS (src/components/Residente/HomeScreen.js)
+------------------------------------------------------------------------------------
+const fetchUnreadCount = async () => {
+  const response = await fetch(API_ENDPOINTS.GET_NOTIFICATIONS(user._id));
+  const data = await response.json();
+  
+  if (response.ok) {
+    let notificationsArray = [];
+    
+    if (Array.isArray(data)) {
+      notificationsArray = data;
+    } else if (data && Array.isArray(data.notifications)) {
+      notificationsArray = data.notifications;
+    } else if (data && Array.isArray(data.data)) {
+      notificationsArray = data.data;
+    }
+    
+    const unread = notificationsArray.filter(n => !n.leida).length;
+    setUnreadCount(unread);
+  }
+};
+
+
+================================================================================
+6. EJEMPLOS DE MENSAJES DE NOTIFICACIÓN
+================================================================================
+
+6.1. NOTIFICACIÓN DE ENTRADA VALIDADA
+--------------------------------------
+Título: "Visita validada"
+Mensaje:
+"Tu visita ha sido validada (entrada).
+
+Observaciones:
+Todo correcto, visitante identificado y autorizado.
+
+Verificaciones realizadas:
+✓ Palabra clave
+✓ Número de personas
+✓ Número de casa
+✓ Placas del vehículo"
+
+
+6.2. NOTIFICACIÓN DE SALIDA REGISTRADA
+---------------------------------------
+Título: "Visita finalizada"
+Mensaje:
+"Tu visita ha sido finalizada (salida).
+
+Observaciones:
+Salida registrada correctamente a las 18:30.
+
+Verificaciones realizadas:
+✓ Número de casa"
+
+
+6.3. NOTIFICACIÓN CON PROBLEMAS
+--------------------------------
+Título: "Visita validada"
+Mensaje:
+"Tu visita ha sido validada (entrada).
+
+Observaciones:
+Las placas del vehículo no coinciden con las registradas. Se permitió el acceso pero se registró la discrepancia.
+
+Verificaciones realizadas:
+✓ Palabra clave
+✓ Número de personas
+✓ Número de casa"
+
+
+================================================================================
+7. VALIDACIONES Y REGLAS DE NEGOCIO
+================================================================================
+
+7.1. AL CREAR UNA NOTIFICACIÓN
+------------------------------
+- Validar que el usuarioId existe en la base de datos
+- Validar que la visitaId existe en la base de datos
+- Validar que el usuarioId corresponde a un RESIDENTE (no guardia)
+- El campo "leida" debe ser false por defecto
+- El campo "createdAt" debe ser la fecha/hora actual
+- El campo "tipo" debe ser "validacion_visita" (puede extenderse en el futuro)
+
+
+7.2. AL OBTENER NOTIFICACIONES
+-------------------------------
+- Solo retornar notificaciones del usuario solicitado
+- Ordenar por createdAt descendente (más recientes primero)
+- Si el usuario no existe, retornar array vacío o error 404
+
+
+7.3. AL MARCAR COMO LEÍDA
+--------------------------
+- Validar que la notificación existe
+- Validar que la notificación pertenece al usuario (seguridad)
+- Actualizar el campo "leida" a true
+- Actualizar el campo "updatedAt" a la fecha/hora actual
+
+
+7.4. AL MARCAR TODAS COMO LEÍDAS
+---------------------------------
+- Validar que el usuario existe
+- Actualizar todas las notificaciones del usuario donde leida = false
+- Retornar el número de notificaciones actualizadas
+
+
+================================================================================
+8. CONSIDERACIONES DE SEGURIDAD
+================================================================================
+
+- Validar que el usuario que solicita sus notificaciones es el mismo del userId
+- No permitir que un usuario vea notificaciones de otro usuario
+- Validar tokens de autenticación si los usas
+- Sanitizar los mensajes antes de guardarlos (prevenir XSS)
+- Limitar el tamaño del mensaje (ej: máximo 2000 caracteres)
+
+
+================================================================================
+9. ESTRUCTURA DE RESPUESTAS ALTERNATIVAS ACEPTADAS
+================================================================================
+
+El frontend acepta diferentes formatos de respuesta para mayor flexibilidad:
+
+Formato 1 (Array directo):
+[
+  { "_id": "...", "usuarioId": "...", ... }
+]
+
+Formato 2 (Objeto con propiedad notifications):
+{
+  "notifications": [
+    { "_id": "...", "usuarioId": "...", ... }
+  ]
+}
+
+Formato 3 (Objeto con propiedad data):
+{
+  "data": [
+    { "_id": "...", "usuarioId": "...", ... }
+  ]
+}
+
+Cualquiera de estos formatos funcionará con el frontend actual.
+
+
+================================================================================
+10. MANEJO DE ERRORES
+================================================================================
+
+El frontend maneja los siguientes casos:
+
+- 404 (Ruta no encontrada): Se muestra lista vacía, no se rompe la app
+- 400 (Bad Request): Se muestra el mensaje de error del backend
+- 500 (Error del servidor): Se muestra mensaje genérico
+- Error de red: Se muestra mensaje de conexión
+
+El backend debe retornar:
+- Códigos HTTP apropiados (200, 201, 400, 404, 500)
+- Mensajes de error descriptivos en español
+- Estructura consistente de errores:
+  {
+    "message": "Descripción del error",
+    "errors": ["Error 1", "Error 2"] // opcional
+  }
+
+
+================================================================================
+11. TESTING SUGERIDO
+================================================================================
+
+Casos de prueba recomendados:
+
+1. Crear notificación exitosamente
+2. Crear notificación con usuarioId inválido
+3. Crear notificación con visitaId inválido
+4. Obtener notificaciones de un usuario con notificaciones
+5. Obtener notificaciones de un usuario sin notificaciones
+6. Obtener notificaciones de un usuario inexistente
+7. Marcar una notificación como leída
+8. Marcar una notificación inexistente como leída
+9. Marcar todas las notificaciones como leídas
+10. Verificar que las notificaciones se ordenan por fecha
+
+
+================================================================================
+12. ARCHIVOS MODIFICADOS EN EL FRONTEND
+================================================================================
+
+1. src/config/api.js
+   - Agregados endpoints de notificaciones
+
+2. src/components/Guardia/ValidVisitScreen.js
+   - Agregado envío de notificación después de validar visita
+
+3. src/components/Residente/NotificationsScreen.js
+   - Pantalla completa para ver notificaciones (NUEVO ARCHIVO)
+
+4. src/components/Residente/HomeScreen.js
+   - Agregado contador de notificaciones no leídas
+   - Agregado botón de acceso a notificaciones
+
+5. src/routes/navigation.js
+   - Agregada ruta a NotificationsScreen
+
+
+================================================================================
+13. INFORMACIÓN ADICIONAL
+================================================================================
+
+- El sistema está diseñado para funcionar incluso si los endpoints no existen
+  (muestra lista vacía, no se rompe)
+- Las notificaciones se envían automáticamente cuando el guardia valida
+- El contador se actualiza automáticamente cuando el usuario vuelve a la pantalla principal
+- Las notificaciones se pueden marcar individualmente o todas a la vez
+- El mensaje incluye formato de texto plano con saltos de línea (\n)
+
+
+================================================================================
+FIN DE LA DOCUMENTACIÓN
+================================================================================
+
+Para cualquier duda o aclaración sobre la implementación del frontend,
+revisar los archivos mencionados en la sección 12.
+
+
